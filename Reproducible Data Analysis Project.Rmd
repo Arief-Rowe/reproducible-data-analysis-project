@@ -1,0 +1,675 @@
+---
+title: "2019-2020 Chicago Player Recuirment"
+author: "Arief Rowe"
+date: "07/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+**Background Information**
+
+Basketball is primarily a 5 on 5 team based game. Each team will have a Point Guard (PG),
+Shooting guard (SG), Small Forward (SF), Power Forward (PF), and a Center (C). The main
+way of scoring points are a field goals, which consist of 2 pointers and 3 pointers. As
+well as free throws, which consist of 1 point. the main defensive statistics are Blocks,
+Steals, and Defensive Rebounds. 
+
+A Point Guards (PG) main roll is to be the general of the team, also known as the play-maker.
+PG's tend to be the smallest player on the court with high basketball IQ. they tend to have
+good ball handling skills and are usually fast, Resulting in high number of assist and 2 point
+field goals. 
+
+A Shooting Guard (SG) are shooting specialist, mainly focusing on perimeter shooting. excelling
+in mid-range shots and 3-point field goals. 
+
+A Small Forward (SF) are the jack of all trades, as they as they can score anywhere on the court.
+They are usually quick and strong, with the ability to drive into the paint and score points, 
+and are able to draw fouls for a potential "and 1" play.
+
+A Power Forward (PF) are considered good scoring option when they are close to the rim, as
+they tend to be the most explosive player on the court. PF's tend to have a good Post game,
+drawing in multiple opposition player, to create open shots for their teammates. They should
+also have good defensive abilities as they play close to the rim. 
+
+A Center (C) have similar traits to a PF, however, a key difference is that they tend
+to be the tallest and strongest players of the court. 
+
+**Scenario**
+
+As the Chicago Bull finished at an overall ranking of 27 out of 30 teams in the 2018-19
+NBA season with a Record of 22 wins and 60 Losses. Due to the teams poor performance,
+they have been allocated a budget of $118 million for player contacts. This is low compared
+to the Portland trailblazers who have the largest budget of $140 million. While the team with
+the best record in league in the 2018-19 season were allocated $131 million.
+
+**Aim of the Project**
+
+With an allocated budget of $118 Million, we are tasked to find the best potential
+starting 5 for the 2019-20 NBA season. However, the $118 Million budget is for
+recruitment of a full squad and needs to be considered when recruiting players.
+
+**Justification and Importance**
+
+We want to recruit players in-order to deliver and win an NBA Championship for
+the City of Chicago. Analyzing players based on their salaries and the statistics
+will aid us in determining and identifying hidden gems and clear must haves for the team.
+
+
+
+## Handling the Data
+**Load the Packages**
+```{r Packages, message=FALSE, echo=TRUE}
+library(tidyverse)
+library(broom)
+library(dplyr)
+library(ggplot2)
+```
+
+**Read in the Data**
+```{r Read in data, message=FALSE,echo=FALSE, results='hide'}
+#Reading in the data
+player_stat <- read.csv("data/2018-19_nba_player-statistics.csv")
+player_salary <- read.csv("data/2018-19_nba_player-salaries.csv")
+team_payroll <- read.csv("data/2019-20_nba_team-payroll.csv")
+team_stat1 <- read.csv("data/2018-19_nba_team-statistics_1.csv")
+team_stat2 <- read.csv("data/2018-19_nba_team-statistics_2.csv")
+```
+
+**Checking the Data**
+```{r Data Structure, message=TRUE,echo=TRUE, results='hide'}
+str(player_stat)
+str(player_salary)
+str(team_payroll)
+str(team_stat1)
+str(team_stat2) 
+```
+
+**Check for Missing Values**
+``` {r NA, message = FALSE, echo = TRUE, results = "hide"}
+#Checking money
+sum(is.na(team_payroll)) 
+sum(is.na(player_salary))
+
+
+##checking the player Statistics
+sum(is.na(player_stat))
+naniar::vis_miss(player_stat)  
+```
+
+There are 117 missing values identified within the dataset. After visualizing 
+where the missing values are present, when can see they are all based within the
+shooting percentage starts, trying to divide 0/0. therefor, we don't need to remove the data.
+
+
+```{r NA_continue, message = FALSE, echo = TRUE, results = "hide"}
+sum(is.na(team_stat2)) 
+sum(is.na(team_stat1)) 
+naniar::vis_miss(team_stat1)
+```
+
+There are 90 missing values present in the first teams statistics dataset. 
+After visualizing where the missing values are present, there are 3 column
+with no data present, therefor, we can remove the the unneeded column. 
+
+## Data Transformation 
+```{r tidy}
+player_stat <- player_stat %>%
+  group_by(player_name, Pos, Age) %>%
+  summarise(across(4:26, ~ mean(.x, na.rm = TRUE))) 
+
+player_stat$player_name <- player_stat$player_name %>%
+  str_replace_all(pattern = "\\.",
+                  replacement = "")
+
+names(player_stat) <- str_replace_all(string = names(player_stat),
+                                    pattern = "_sum",
+                                    replacement = "")
+
+
+##rename variable names in player_statistics
+player_stat <-rename(player_stat,
+                    FG_per = `FG.`, 
+                    x3P = `X3P`, 
+                    x3PA = `X3PA`, 
+                    x3P_per = `X3P.`, 
+                    x2P = `X2P`, 
+                    x2PA = `X2PA`, 
+                    x2P_per = `X2P.`, 
+                    eFG_per = `eFG.`, 
+                    FT_per = `FT.`)
+
+##rename variable names for team statistics 1
+team_stat1 <-rename(team_stat1, 
+                           TS_per = `TS.`, 
+                           eFG_per = `eFG.`, 
+                           TOV_per = `TOV.`, 
+                           ORB_per = `ORB.`, 
+                           FTpFGA = `FT.FGA`, 
+                           DRB_per = `DRB.`)
+
+##rename variable names for team statistics 2
+team_stat2 <-rename(team_stat2,
+                           FGp = `FG.`, 
+                           x3_per = `X3P`, 
+                           x3PA = `X3PA`, 
+                           x3P_per = `X3P.`, 
+                           x2P = `X2P`, 
+                           x2PA = `X2PA`, 
+                           x2P_per = `X2P.`,
+                           FT_per = `FT.`)
+```
+
+## Exploratory Anlysis 
+Offensive and defensive rating are key metrics when determining and analysing a team potential win in a season. As having both a strong offensive game will lead to more points being scored, and a strong defensive game will result in less points conceded. Therefore, the key metric we will observe are: 
+
+- ORtg (Teams Offensive Rating)
+- DRtg (Teams Defensive Rating)
+- NRtg (Teams Net Rating)
+- TOV% (Teams Turnover Percentage)
+
+```{r Team Ratings and Wins, message = FALSE}
+##checking offensive rating
+ggplot(team_stat1, aes(x = ORtg, y = W))+ 
+  geom_point(alpha = 0.5, colour = "red")+
+  geom_smooth(method = "lm")
+
+
+##defensive rating
+ggplot(team_stat1, aes(x = DRtg, y = W))+ 
+  geom_point(alpha = 0.5, colour = "red")+
+  geom_smooth(method = "lm")
+
+
+##Net rating
+ggplot(team_stat1, aes(x = NRtg, y = W))+ 
+  geom_point(alpha = 0.5, colour = "red")+ 
+  geom_smooth(method = "lm")
+
+
+##checking turnovers per game 
+ggplot(team_stat1, aes(x = TOV_per, y = W))+ 
+  geom_point(alpha = 0.5, colour = "red")+ 
+  geom_smooth(method = "lm")
+```
+
+ORtg and NRtg shows a positive relationship with wins, while DRtg and TOVp show a negative relationship with wins. 
+
+However, NRtg displayed a strong positive relationship compared to the other variables variables, we will use Pearson Method to check the correlation. 
+
+```{r Pearson Correlation}
+cor(x = team_stat1$NRtg, y = team_stat1$W, method = "pearson")
+```
+
+The results shows us a value of 0.98 which indicated a strong positive relationship between NRtg and Wins.
+
+As Net Rating has now been determined as an important factor to wins, it would benefit us to look at the Offensive Rating and Defensive Rating measures and the metrics that measure these variables. 
+
+The NBA provides and obtains efficiency statistics based on a players individual statistics.
+These mainly being points, rebounds, assists, blocks, steals, and turnovers, which can be broken into
+postie and negative traits. Where points and assists are positive offensive traits. Where
+Rebounds, Steals, and Blocks are positive defensive traits. And where turnovers are negative traits. {1,2,3,4}
+
+Based on this, our focus on offensive traits would be:
+
+- 3 point shooting percentage (x3Pp)
+- 2 point shooting percentage (x2Pp)
+- Assists (AST)
+- Total Rebounds (TRB)
+
+and the defensive traits would be: 
+
+- Steals (STL)
+- Blocks (BLK)
+- Turnovers (TOV) *(a negative emphasis on this variable as this is a loss of possession)*
+
+```{r Offensive and Defensive Trait Stats}
+##Merge the two team datasets together
+team_statistics <- merge(team_stat1,team_stat2, by  = "Team")
+                         
+#Using the Offensive and Defensive traits listed above, let's have a look to see if we get a linear relationship 
+##plot pts against NRtg
+ggplot(team_statistics, aes(x = PTS, y = NRtg))+ 
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+
+
+##NRgt ~ TRB
+ggplot(team_statistics, aes(x = TRB, y = NRtg))+
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+
+##NRgt ~ AST
+ggplot(team_statistics, aes(x = AST, y = NRtg))+
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+
+##NRgt ~ STL
+ggplot(team_statistics, aes(x = STL, y = NRtg))+
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+
+#NRgt ~ BLK
+ggplot(team_statistics, aes(x = BLK, y = NRtg))+
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+
+##NRgt ~ TOV
+ggplot(team_statistics, aes(x = TOV, y = NRtg))+
+  geom_point(alpha = 0.5, colour = "red") + 
+  geom_smooth(method = "lm")
+```
+
+All positive based statistics showed a positive relationship, while negative statistics (Steals and Turnovers) showed a negative relationship 
+As expected, turnovers showed a moderate negative relationship 
+
+```{r Data Transformation}
+team_statistics <- team_statistics %>%
+  mutate(PTS_PG = PTS / G,
+         REB_PG = TRB / G,
+         AST_PG = AST / G, 
+         STL_PG = STL / G,
+         BLK_PG = BLK / G,
+         TOV_PG = TOV / G)
+```
+
+```{r Multiple Linear Regression}
+fit <- lm(NRtg ~ PTS_PG + REB_PG + AST_PG + STL_PG + BLK_PG + TOV_PG, 
+          data = team_statistics)
+tidy(fit, conf.int = TRUE)
+```
+
+The slope coefficient says that teams that get 1 more: 
+
+PTS_PG than the average team, score 0.338 more NRtg_per_game than the average team, 
+
+REB_PG than the average team, score 0.779 more NRtg_per_game than the average team,
+
+AST_per_game than the average team, score 0.0.367 less NRtg_per_game than the average team,
+
+STL_per_game than the average team, score 0.691 more NRtg_per_game than the average team,
+
+BLK_per_game than the average team, score 1.53 more NRtg_per_game than the average team,
+
+TOV_PG than the average team, score 20.3 less NRtg_per_game than the average team.
+
+
+## Assumptions 
+
+**1. The response variable should be continuous (i.e. ratio/interval)**
+
+Net Rating is a ratio scale of measurement. 
+
+**2. There are two or more explanatory variables that are either continuous or categorical**
+
+All explanatory variables are continuous. 
+
+**There should be independence of observations** 
+```{r Independance of Observations}
+car::durbinWatsonTest(fit)
+```
+The Durbin-Watson statistic shows a value of 1.24 which indicates that there is no correlation between residuals and are independent. 
+
+**3. There should be a linear relationship between the response variable and each explanatory variable**
+```{r Partial Regression Plot}
+car::avPlots(fit)
+```
+
+All explanatory variables have a linear relationship with the response variable.  
+
+**4. There should be no significant outliers, influential or high leverage points**
+```{r Outliers}
+std_res <- rstandard(fit)
+points <- 1:length(std_res)
+
+ggplot(data = NULL, aes(x = points, y = std_res)) +
+  geom_point(colour = "black") +
+  ylim(c(-4, 4)) +
+  geom_hline(yintercept = c(-3, 3), colour = "black", linetype = "dashed")
+```
+
+All points reside within 3 standard deviations from 0; therefore, there are not outliers present. 
+
+```{r Leverage Points}
+hats <- hatvalues(fit)
+hats_labels <- if_else(hats >= 0.4, paste(points), "")
+
+ggplot(data = NULL, aes(x = points, y = hats)) +
+  geom_point(colour = "black") +
+  geom_text(aes(label = hats_labels), nudge_x =1)
+```
+
+All values are closer to 0 than 1. However, there are 3 points above 0.4 which are 6,11,21 which might need further investigating. 
+
+```{r Cooks Distance}
+cook <-cooks.distance(fit)
+cook_labels <- if_else(cook >= 0.2, paste(points), "")
+
+ggplot(data = NULL, aes(x =points, y = cook)) +
+  geom_point(colour = "black") +
+  geom_text(aes(label = cook_labels), nudge_x =1)
+```
+
+Point 11 seems to be a point of influence and leverage, We need to investigate.
+
+
+```{r Inversitgationg of Point 11}
+ggplot(team_statistics, aes(x = PTS_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue") +
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+
+  #agasint REB_PG
+ggplot(team_statistics, aes(x = REB_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue") +
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+
+  #against AST_PG
+ggplot(team_statistics, aes(x = AST_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue") +
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+
+
+  #Against STL_PG
+ggplot(team_statistics, aes(x = STL_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "Black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue")+
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+
+  #against BLK_PG
+ggplot(team_statistics, aes(x = BLK_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue")+
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+
+  #against TOV_PG
+ggplot(team_statistics, aes(x = TOV_PG, y = NRtg))+
+  geom_point(alpha = 1, colour = "black")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed")+
+  geom_smooth(method = "lm", colour = "blue") +
+  geom_text(aes(label = cook_labels), nudge_y = 0.5)
+```
+
+After further investigation, there is no evidence present that point 11 is a point of influence or leverage.
+
+
+**5. The data needs to show homoscedasticity**
+```{r Homoscedasticity}
+res<- residuals(fit)
+fitted <- predict(fit)
+
+ggplot(team_statistics, aes(x = fitted, y = res))+
+  geom_point(colour = "blue")+
+  geom_hline(yintercept = 0, colour = "red", linetype = "dashed") +
+  geom_smooth(se = FALSE, colour = "black")
+```
+
+There is no clear pattern present; therefor, homoscedasticity is met.
+
+**6. The residuals should be normally distributed**
+```{r Normality}
+#Check for normal distribution, using a histogram 
+ggplot(data =NULL, aes(x= res))+
+  geom_histogram( colour = "Black", fill = "Blue", binwidth = 1.5)
+```
+
+The data appears to be normally distributed 
+
+```{r Q-Q Plot}
+#We can also check normality through a normal Q-Q plot 
+ggplot(data = NULL, aes(sample =res))+
+  stat_qq() + stat_qq_line()
+```
+
+The Q-Q Plot shows that the points appear normally distributed 
+
+**7. There should not be multicollinearity between the explanatory variables**
+```{r Pairs}
+pairs(formula = ~ PTS_PG + REB_PG + AST_PG + STL_PG + 
+        BLK_PG + TOV_PG, data = team_statistics)
+```
+
+There are no clear relationships between the explanatory variables; therefor, the assumption has been met.
+
+```{r VIF}
+car::vif(fit)
+sqrt(car::vif(fit))
+```
+
+There is no evidence of multicollinearity. 
+
+
+## Model Testing 
+
+### The model we are using is: 
+
+**Net Rating: -66.2 + 0.338(PTS_PG) + 0.779(REB_PG) + 0.367(AST_PG) + 0.691(STL_PG) + 1.53(BLK_PG) - 2.03(TOV_PG)**
+
+**Applying the Model (Expected_NRtg vs NRtg)**
+```{r Applying the Model}
+team_statistics<- mutate(team_statistics, 
+                         exp_NRtg_PG = predict(fit,
+                                               newdata = team_statistics))
+
+ggplot(team_statistics, aes(exp_NRtg_PG, NRtg, label = Team)) + 
+  geom_point(colour = "black") +
+  geom_text(nudge_x = -1.5, cex = 1.75) +
+  geom_abline(linetype = "solid", colour = "black") +
+  xlab("Expected Net Rating Per Game") +
+  ylab("Net Rating")
+```
+
+**Applying the Model (Expected_NRtg vs Wins)**
+```{r Wins~NRtg}
+ggplot(team_statistics, aes(x = W, y = exp_NRtg_PG, label = Team)) + 
+  geom_point(colour = "black") +
+  geom_text(nudge_x = 3.5, cex = 2) +
+  geom_abline(linetype = "solid", colour = "black") +
+  xlab("Wins") +
+  ylab("Expected Net Rating Per Game")
+```
+
+
+## Player Metrics 
+
+Calculate the number of minutes each team played per game on average across the league. 
+```{r Minutes Summarised}
+min_PG <- team_statistics %>%
+  group_by(Team) %>%
+  summarise(min_PG = (MP/G)) %>%
+  pull(min_PG) %>%
+  mean 
+
+min_PG
+```
+
+Creating new statistics per game for each player while adjusting the average minutes played per game
+```{r Per Minute Performance}
+players <- player_stat %>%
+  group_by(player_name) %>%
+  summarise(G = sum(MP) / min_PG,
+            PTS_PG = sum(PTS) / G,
+            REB_PG = sum(TRB) / G,
+            AST_PG= sum(AST) / G, 
+            STL_PG = sum(STL) / G,
+            BLK_PG = sum(BLK) / G,
+            TOV_PG = sum(TOV) / G,
+            MP = sum(MP)) %>%
+  filter(MP >= 200) %>%
+  select(-G)
+```
+
+### Expected Net Rating Per Player
+
+We need to calculate player-specific expected net rating.
+
+The expected net rating metric can be interpreted as the net effect we expect a player has on the overall score if the player plays at his best.
+
+```{r Expected NRtg per player}
+players <- mutate(players, exp_NRtg = predict(fit, newdata = players))
+
+players %>%
+  ggplot(aes(x = exp_NRtg)) +
+  geom_histogram(binwidth = 0.5, colour = "red", fill = "black")
+```
+
+
+### Adding Salary & Position 
+
+We need to add the players' salary and positions back into our source. 
+This will be a crucial step in obtaining a starting 5.
+
+```{r Salary & Position}
+players <- player_salary %>%
+  select(player_name, salary) %>% 
+  right_join(players, by = "player_name")
+
+players <- player_stat %>%
+  select(player_name, Pos) %>% 
+  right_join(players, by = "player_name")
+```
+
+
+### Selecting Players by Expected NRtg 
+
+Let's see who the best expected net rating players are 
+
+```{r Expected NRtg}
+players %>%
+  select(player_name, Pos, salary, exp_NRtg) %>% 
+  arrange(desc(exp_NRtg), salary) %>%
+  top_n(30)
+
+players %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = Pos))+
+  geom_point()+ 
+  xlab("Salary (Millions)") +
+  ylab("Expected Net Rating")
+```
+
+## Potential Recuritment Targets for Each Position 
+
+To complete the aim of our analysis, we will look at each position to come up with our starting 5. 
+
+### Point Guard 
+```{r Target Point Guard}
+players %>%
+  filter(Pos == 'PG') %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = player_name)) +
+  geom_point() + 
+  geom_text(aes(label=ifelse(exp_NRtg > 5,as.character(player_name),'')),hjust=0,vjust=-1) +
+  expand_limits(x = 60, y = 45)+
+  theme(legend.position = "none")+
+  xlab("Salary (Millions)")  +
+  ylab("Expected Net Rating") 
+```
+
+Michael Carter-Williams, Ben Simmons, and Kemba Walker are potential targets for the Point Guard Position.
+
+### Shooting Guard 
+```{r Target Shooting Guard}
+players %>%
+  filter(Pos == 'SG' | Pos == 'SG-SF' | Pos == 'PF-SG' | Pos == 'SG-SF') %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = player_name)) +
+  geom_point() + 
+  geom_text(aes(label=ifelse(exp_NRtg > 4,as.character(player_name),'')),hjust=-0.2,vjust=0.5) +
+  expand_limits(x = 50)+
+  theme(legend.position = "none")+
+  xlab("Salary (Millions)") +
+  ylab("Expected Net Rating") 
+```
+
+Jeremy Lamb is the clear target player we should be recruiting. With Pat Connaughton, Buddy Hield, and Luka Doncic as the next best options. 
+
+### Small Forward 
+```{r Target Small Forward}
+players %>%
+  filter(Pos == 'PF-SF' | Pos == 'SF' | Pos == 'SF-SG' | Pos == "SG-SF") %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = player_name)) +
+  geom_point() + 
+  geom_text(aes(label=ifelse(exp_NRtg > 10,as.character(player_name),'')),hjust=1.1,vjust=0.5) +
+  theme(legend.position = "none")+
+  expand_limits(x = -10)+
+  xlab("Salary (Millions)") +
+  ylab("Expected Net Rating") 
+```
+
+Kawhi Leonard, Danilo Gallinari, and Jimmy Butler are superstars than should be considered, while Rondae Hollis-Jefferson should be a clear target for recuritment. 
+
+### Power Forward 
+```{r Target Power Forward}
+players %>%
+  filter(Pos == 'C-PF' | Pos == 'PF-C' | Pos == 'PF' | Pos == 'PF-SF' | Pos == "SG-PF") %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = player_name)) +
+  geom_point() + 
+  geom_text(aes(label=ifelse(exp_NRtg > 30,as.character(player_name),'')),hjust=-0.05,vjust=0.5) +
+  expand_limits(x = 35)+
+  theme(legend.position = "none")+
+  xlab("Salary (Millions)") +
+  ylab("Expected Net Rating") 
+```
+
+Giannis Antetokounmpo was the MVP of the 2018-19 Season and would be an ideal target, even with a $24million price tag. John Collins, Christian Woods, and Cheick Diallo are also potential options.  
+
+### Center 
+```{r Target Center}
+players %>%
+  filter(Pos == 'C-PF' | Pos == 'PF-C'| Pos == 'C') %>%
+  ggplot(aes(x = salary/1000000, y = exp_NRtg, color = player_name)) +
+  geom_point() + 
+  geom_text(aes(label=ifelse(exp_NRtg > 45,as.character(player_name),'')),hjust=1.2,vjust=0.5) +
+  expand_limits(x = -25)+
+  theme(legend.position = "none")+
+  xlab("Salary (Millions)") +
+  ylab("Expected Net Rating")
+```
+
+Karl-Anthony Towns is a strong center early in his career that would could potentially target. with Mitchell Robinson and Robert Williams as other potential target for the team.
+
+# Chicago Bulls 2019-2020 
+Based on our analysis, let's create a new data frame with our top 5 starting players for each position. 
+
+```{r Starting 5 2019-2020}
+starting_5 <- players %>%
+  filter(player_name %in% c("Karl-Anthony Towns", "Giannis Antetokounmpo", "Kawhi Leonard", "Luka Doncic", "Michael Carter-Williams")) %>%
+  arrange(desc(salary))
+
+sum(starting_5$salary)
+```
+
+The sum of the Chicago Bulls starting team for 2019-2020 based on my analysis would be $63,147,927 Million,
+which leaves $54,852,073 Million for the remaining team.
+
+
+Alternative Player that can be recruited are:
+
+PG: Ben Simmons and Kemba Walker
+
+SG: Jeremy Lamb, Pat Connaughton, and Buddy Hield
+
+SF: Danilo Gallinari, Jimmy Butler, Rondae Hollis-Jefferson
+
+PF: John Collins, Christian Woods, and Cheick Diallo
+
+C: Mitchell Robinson and Robert Williams
+
+
+## Reference:
+
+1. GreenBerg N. What is Player Efficiency Rating? [Internet]. The Washington Post. 2017 [cited 11 May 2022]. Available from: https://www.washingtonpost.com/what-is-player-efficiency-rating/37939879-1c08-4cfa-aff3-51c2a2ae060e_note.html
+
+2. Calculating PER | Basketball-Reference.com [Internet]. Basketball-Reference.com. 2018 [cited 11 May 2022]. Available from: https://www.basketball-reference.com/about/per.html
+
+3. Csataljay G, O'Donoghue P, Hughes M, Dancs H. Performance indicators that distinguish winning and losing teams in basketball. International Journal of Performance Analysis in Sport. 2009 Apr 1;9(1):60-6. 
+
+4. García J, Ibáñez SJ, De Santos RM, Leite N, Sampaio J. Identifying basketball performance indicators in regular season and playoff games. Journal of human kinetics. 2013 Mar;36:161.
